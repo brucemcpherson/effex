@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>effex-demo-markers</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- load MUI -->
+    <link href="https://cdn.muicss.com/mui-0.9.9/css/mui.min.css" rel="stylesheet" type="text/css" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="shortcut icon" href="img/exn64.ico" type="image/x-icon">
+    <script src="https://cdn.muicss.com/mui-0.9.9/js/mui.min.js"></script>
+    
+    <style>
+
+      #map {
+        height: 100%;
+        margin-left: 210px;
+
+      }
+      
+      #panel {
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 5;
+        background-color: #fff;
+        width:180px;
+
+      }
+      
+      #errify {
+        height:110px;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width:180px;
+        padding:15px;
+      }
+      
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      .iconlink {
+        cursor:pointer;
+      }
+      
+      #camera {
+        position:absolute;
+        display:block;
+        background-color:white;
+        width:24px;
+        height:56px;
+        top:40px;
+        right:20px;
+        z-index:6;
+      }
+
+    </style>
+  </head>
+
+  
+    <div id="map"></div>
+    <div id="camera" class="mui--hide">
+      <div class="inconlink">
+        <i id="snap" class="material-icons">photo_camera</i>
+        <i id="reset" class="material-icons">restore_page</i>
+      </div>  
+    </div>
+    <div id="panel" class="mui-panel" style="padding-top:0;padding-bottom:0;margin:0;">
+      <h4>Effex store data</h4>
+      <div class="mui-divider"></div>
+      <div>Updater key</div>
+      <div id="efx-key" style="font-size:.7em;"></div>
+      <div>Item key</div>
+      <div id="efx-id" style="font-size:.7em;"></div>
+      <div class="mui-divider"></div>
+      <br>
+      <div class="mui--text-dark-secondary">
+        <div>Collecting data using maps</div>
+        <ul><br>
+          <li>Clicking on a marker allows you to modify its contents, or to delete it</li>.
+          <li>Right click somewhere on the map to drop in a new marker"</li>
+        </ul>
+      </div>
+      <div style="padding-top:40px;">
+        <div>When finished, update the store to send back changes</div>
+        <div><br></div>
+        <button id="update" class="mui-btn mui-btn--primary">Update store</button>
+      </div>
+      
+      <div id="errify" class="mui--bg-danger mui--hide mui--text-white mui--text-caption"></div>
+    </div>
+    <script src="https://www.google.com/jsapi"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20150312/classList.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/es6-promise/4.0.5/es6-promise.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.15.3/axios.min.js"></script>
+    
+    <script src="lib/effexapiclient.js"></script>
+    <script src="src/mapsApiKey.js"></script>
+    <script src="src/maps.js"></script>
+    <script src="src/main.js"></script>
+
+  </body>
+  
+</html>
