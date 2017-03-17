@@ -15,6 +15,10 @@ For a full write up see
 
 http://ramblings.mcpher.com/Home/excelquirks/ephemeralexchange
 
+For API methods see
+
+https://github.com/brucemcpherson/effex/blob/master/node/libs/effex-api-client/README.md
+
 contact me if you wish to contribute, and use the Issues tracker for anything you want to report. 
 
 This repo contains all the consolidated code and demos for all platforms for Ephemeral Exchange
