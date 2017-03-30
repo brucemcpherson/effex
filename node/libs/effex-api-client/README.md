@@ -5,17 +5,32 @@ A cross platform cache, with a simple HTTP REST API that supports CORS
 
 ## Getting started
 
+### NPM
+
+For Node, or if you are developing using a package manager, install the client
 ```
 npm install effex-api-client --save
 ```
-
-See the tests module for a complete list of everything you can do
-
-to check if everything is working
-
+Then in your code
 ```
 var efx = require ('effex-api-client');
+```
 
+### SCRIPT tag
+
+If you are including the library with a script tag
+
+```
+<script src="https://storage.googleapis.com/xliberation.com/effex-api/effex-api-client-v1.0.min.js"></script>
+```
+Then in your code
+```
+var efx = EffexApiClient;
+```
+
+## To check you have connectivity
+
+```
 // set up client 
 efx.setBase("https://ephex-auth.appspot-preview.com");
 
@@ -39,8 +54,9 @@ Before you can write to the store, you need a writer key. You need to generate w
 | reader | reading | data from the store      | with the API and a boss key |
 | item | needed to access a data item | by writing an item to the store with the API |
 | alias | can be used to assign a constant name to a data item | by assigning an alias to to a particular key/item combination using a writer key |
+| intent | authorization for a follow on action | by issuing a read with an intention parameter |
 
-Typically the account owner would keep the boss keys and writer keys private, and share item ,updater or reader keys with collaborators or collaborating applications.
+Typically the account owner would keep the boss keys and writer keys private, and share item ,updater or reader keys with collaborators or collaborating applications. Intent keys are an advanced topic, dealt with later in this documentation.
 
 To be able to access an item, these things need to happen
 1. A writer key is needed to write data to the store. An item key is generated. The same writer key can be used to write many items. 
@@ -59,16 +75,15 @@ All access keys and items are associated with a specific account and will be imm
 ## Security
 This is a public store, and there is no authentication required. However, keys are required for all data accesses, and both the data and its keys are encrypted in the store. You may also choose to further encrypt it before sending it to the store too. In any case, to ensure you comply with your country's privacy laws on the storage of personally identifiable data, don't do it. 
 
-# Node client
-The API has a simple HTTP REST API - take the tutorial to see the structure of each call if you want to write your own client. https://storage.googleapis.com/effex-console-static/bundle/index.html#/ .You can even use a browser to access the store if you want - handy for debugging. 
+# Client API SDK for Node and JavaScript
+The API has a simple HTTP REST API - take the tutorial to see the structure of each call if you want to write your own client. The tutoral is part of the API console, which you can find at https://storage.googleapis.com/effex-console-static/bundle/index.html#/.  The console also has a JSON editor and viewer to allow you to directly access data in the store. You can even use a browser to access the store if you want - handy for debugging.
 
-For convenience this node client is available, and of course you can use it in a web app too. 
+For convenience this node/JavaScript client is available, and of course you can use it in a web app too. There are other platform clients available too.For details see the consolidated repo. https://github.com/brucemcpherson/effex
 
-## Initialization
-Once you've installed it with npm, 
+## Initialization 
 
+Once you've included either with a package manager or a script tag: 
 ```
-var efx = require ('effex-api-client');
 
 // set up client 
 efx.setBase("https://ephex-auth.appspot-preview.com");
@@ -117,7 +132,7 @@ Many api calls take parameters. They all follow the same format. The data payloa
 Here is a list of the parameters that the API understands and where they can be used with this client. Params are always passed as a key/value pair object.
 
 
-| Parameter | what it is for | can use in client |
+| Parameter | what it is for | when used in client |
 | ------------- | ---------------| ---------------|
 | data |	If GET is used (rather than POST), this parameter can be used to specify the data to be written | Not needed. It is generated automatically when required |
 | readers |	A comma separated list of reader keys that can read this item. | when creating an item | 
@@ -126,6 +141,9 @@ Here is a list of the parameters that the API understands and where they can be 
 | callback |	Provide a callback function name to request a JSONP response | all |
 | days | How many days an access key should live for | generating access keys |
 | seconds | As an alternative to days, how many seconds an access key should live for | generating access keys |
+| intention | To signal an intention for further operations, such as an update following a read | to lock updating for a time |
+| intent | An authorization key to proceed with a follow on operation | to fulfill a previous signalled intention |
+
 
 
 
@@ -480,7 +498,165 @@ size:175
 code:201
 alias:"myalias"
 ```
+# Advanced topics
 
+These are experimental, under development, and may only be available to plans other than the free one.
+
+## Intentions
+
+It's quite difficult to preserve atomicity in a rest API since by definition it is stateless. This means that if you read an item, and then want to update it, it's possible that the item has been modified or removed by someone else in the meantime. Because of the typical usage of the store, this is probably not a likely event, but still needs to be catered for. This is how the store deals with preserving atomicity
+
+### What are intentions
+
+You can register the intention of doing further work on an item. For now the only intention supported is update. The existence of an intention is short, and will expire after a short period of time (to be determined). While an item has an intention taken out on it, it is still readable, but cannot be updated or deleted by anyone else.
+
+### Identifying the intention
+
+Using intentions can be tricky. Here a are a few important points.
+
+#### Intention key
+
+This key is created by the API, and returned when a read operation with an intention is requested. It must be returned to fulfill the intention. An intention key can be used only once.
+
+#### Access key
+
+An intention key is associated with a specific access key - the one that initiated the intention update request -, so you should use a writer or an updater key (that has been authorized to access the item) to read the item, and then follow it up with an update action using the same key. An intention request with a reader key will create an intention (to allow for future intention types), but will be assigned to the reader key. Therefore, the initial read request for an intention should always be made with the key that will eventually consume the intention request.
+
+#### Alias
+
+As usual, you can use an alias to read an item, and its underlying item id will be returned along with the data, and the generated intention key. Although you *can* follow up with an update request using the alias, you *should* instead use the returned native item id. This avoids the  situation where an alias has been reassigned to a different item in the meantime. This is an unlikely situation since an alias is associated with a specific access key, and there would need to be a registration of an alias with the same updater key and alias name in the time between your intention request and fullfillment - which is a stretch, but nevertheless possible.
+
+#### Update attempts while intention is active
+
+If an item has an active intention on it, and an attempt is made to update (or remove) it without specifiy matching intention or from another key, the request will be rejected. If you think this is likely to happen you should cater for it. A read response to an item that has an active intention on it, will include when the intention expires, so a good way to deal with it is to re-issue the request after that time.
+
+### Intention parameter
+
+An intention request is specified by a parameter in the read request.
+
+### read (id,  key , {intention:"update"} )
+
+Read a data item from the store, where id is the id returned by a write operation (or an alias), and key is any kind of key that has been authorized to read this item. Note that a writer key can always read, update or remove an item it has created, so in the case of an intention to update, the key should be an updater or writer.
+
+example
+```
+efx.read ("dx1f7-s18-167ibfeb9bfm", "uxk-f1m-b17ce9uo_t9b", {intention:"update"})
+.then (function (response) {
+  // do something  with response.data
+});
+
+```
+translates to native api url
+```
+https://ephex-auth.appspot-preview.com/reader/uxk-f1m-b17ce9uo_t9b/dx1f7-s18-167ibfeb9bfm?intention=update
+```
+
+example response. The data payload will be in the value property. The intentExpires property is how many seconds the intention will be in place for (from the time it was registered)
+```
+reader:"uxk-f1m-b17ce9uo_t9b"
+ok:true
+id:"dx1f7-s18-167ibfeb9bfm"
+accountId:"1f7"
+plan:"x"
+value:"a data item that can be read by another"
+code:200
+modified:1489752873661
+intent:"ix1f7-s23-fm123h9dhdo"
+intentExpires:10
+```
+
+### update (data, id, updater, method  , params)
+
+Update a data item in the store, where id is the id returned by a write operation (or an alias), and key is any kind of key that has been authorized to update this item. Note that a writer key can always update an item it has created, and data is the new value to set for the given item id. As with write, it is possible (but not preferred), to use a GET method instead of the default POST. The intent parameter should be the intention key returned by the initial read request.
+
+example
+```
+efx.update (data , "dx1f7-m12-167ibfev9bfh", "uxk-f1m-b17ce9uo_t9b","post",{intent:"ix1f7-s23-fm123h9dhdo"})
+.then (function (response) {
+  // do something  with response.data
+});
+
+```
+translates to native api url
+```
+https://ephex-auth.appspot-preview.com/updater/uxk-f1m-b17ce9uo_t9b/dx1f7-m12-167ibfev9bfh?intent=ix1f7-s23-fm123h9dhdo
+```
+
+example response. 
+```
+updater:"uxk-f1m-b17ce9uo_t9b"
+ok:true
+id:"dx1f7-m12-167ibfev9bfh"
+plan:"x"
+accountId:"1f7"
+lifetime:3600
+modified:1489752873655
+size:196
+```
+The response to an update attempt that is prevented from completing by an outstanding intention will contain a error message, and code of 409 along with an intentExpires value, which will indicate the number of seconds from when the request was made until the current lock expires.
+
+## Watching
+
+You can subscribe to watch an item to listen for changes. A subscription is made by a combination of access key and item id (since a key is needed to validate that you have access to an item). You can use any of reader, writer and updater keys to subscribe with, as long as they have read access to the target item. Note that watching is managed within the SDK. You cannot subscribe directly with the REST API alone.
+
+### Lifetime
+
+A subscription can be set to have a lifetime after which it disappears. In any case it will disappear when the access key it belongs to expires.
+
+### Alias or id
+
+You can watch either a specific item, or  an alias. Alias subscription will follow changes in the alias assignment to new items, whereas a specific item subscription will only last as long as the item lasts. An alias subscription will last for as long as an alias is assigned to some item
+
+### Events
+
+You can choose which events to listen for from one or more of this list. Events are triggered strictly in the order they are detected.
+- update - if content is updated
+- remove - if item is removed
+- alias - if an alias is changed to another item
+- read - when an item is read
+- expire - when an item expires
+- unwatch - watch subscription was ended, or expired
+- error - something has gone wrong with the watching process
+
+#### Event object
+
+```
+type: update|remove|alias|read|expire|end|cancel|start
+timestamp: when the event happened
+message: any supplemental information such as an error message
+id:the id  of the item or alias being watched
+key:the key that is watching it
+watchKey: the watch key identifying the subscription
+```
+
+### Watch subscriptions
+
+This is done through the watch method, and cancelled with unwatch. Registration of event callbacks is with the onWatch method.
+
+### watch (id,  key , params)
+
+To actually receive events, you need to use onWatch passing the watchKey created here.
+- The id is the alias or item id to subscribe to (see previous comments on difference between subscribing to an id and an alias). 
+- The key is the reader, writer or updater key authorized to read the item 
+- params are used to modify the watch subscription behavior
+
+### unwatch (watchKey)
+
+This removes any previous watch using the watchKey. unwatch is automatically called when the watch subscription expires.
+- watchKey is the key created when the watch subscription was created
+
+### onWatch (watchKey , eventType , callback, params) 
+
+Registers a callback when an event of a given type is detected.
+
+- EventType is a string of any of the valid event types
+- watchKey is the key returned when the watch was created. 
+- callback is initiated when the event is detected and receives an event object as described earlier
+- used to modify the onWatch behavior
+
+## Push notification or pull
+
+By default the SDK will watch for changes in the selected item, but it is also possible to set up push notification. In this case a given URL will be called by the API with information about the event. Documentation to follow on this.
 
 ## More stuff
 See http://ramblings.mcpher.com/Home/excelquirks/ephemeralexchange for more stuff
